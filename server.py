@@ -44,7 +44,7 @@ def get_all_route_polylines():
 
 @app.route("/get-all-stops", methods=["POST"])
 def get_all_stops():
-    stops = tuegtfs_utils.stops
+    stops = tuegtfs_utils.get_tue_stops()
     stops = stops[["stop_id", "stop_name", "stop_lat", "stop_lon"]]
     stops_list = stops.to_dict(orient="list")
     return jsonify(stops_list)
