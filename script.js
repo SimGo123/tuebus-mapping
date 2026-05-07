@@ -3,7 +3,7 @@ console.log("script started");
 const url = "http://localhost:5001";
 let alive = true;
 
-const freqBusUpdateSec = 1; // Update every second
+const freqBusUpdateSec = 0.1;
 const sparseBusUpdateSec = 30; // Update every 30s
 
 async function getAllPolylines() {
@@ -52,8 +52,8 @@ async function getAllStops() {
 // }
 
 function timeToSeconds(t) {
-  const [h, m, s] = t.split(":").map(Number);
-  return h * 3600 + m * 60 + s;
+    const [h, m, s] = t.split(":").map(Number);
+    return h * 3600 + m * 60 + s;
 }
 
 function getCurrentTimeInSeconds() {
@@ -61,7 +61,8 @@ function getCurrentTimeInSeconds() {
     const currentTime =
         now.getHours() * 3600 +
         now.getMinutes() * 60 +
-        now.getSeconds();
+        now.getSeconds() +
+        now.getMilliseconds() / 1000;
     return currentTime;
 }
 
@@ -77,9 +78,9 @@ function getPrevAndNextStop(arriv_times, dept_times) {
         dept = timeToSeconds(dept_times[i]);
 
         if (prev_dept <= currentTime && currentTime <= arr) {
-            return [i-1, i];
+            return [i - 1, i];
         } else if (currentTime < prev_dept) {
-            return [i-1, i-1];
+            return [i - 1, i - 1];
         }
     }
     return -1;
@@ -89,7 +90,7 @@ function getTripPos(tripData, prevNext) {
     lats = tripData.stop_lat;
     lons = tripData.stop_lon;
     if (prevNext == -1) {
-        return [[lats[lats.length-1], lons[lons.length-1]], [0, 0]];
+        return [[lats[lats.length - 1], lons[lons.length - 1]], [0, 0]];
     }
     const [prevStop, nextStop] = prevNext;
     const prevDept = timeToSeconds(tripData.departure_time[prevStop]);
@@ -122,11 +123,12 @@ async function updateBuses() {
         return;
     }
 
+    console.time("busUpdate");
     updates = {};
     Object.entries(basicData).forEach(([idx, tripData]) => {
         prevNext = getPrevAndNextStop(tripData.arrival_time, tripData.departure_time);
         const [tripPos, latLonDiff] = getTripPos(tripData, prevNext);
-        
+
         line = tripData.route_short_name;
         descr = tripData.route_long_name;
         tripId = tripData.trip_id;
@@ -136,6 +138,8 @@ async function updateBuses() {
     });
 
     syncBusMarkers(updates);
+
+    console.timeEnd("busUpdate");
 }
 
 exCoord = [48.53, 9.03];
