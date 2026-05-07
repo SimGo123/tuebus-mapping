@@ -43,52 +43,20 @@ def filter_by_line_id(df: pd.DataFrame, line_id: str):
     filtered = df[df["trip_id"].str.contains(line_id)]
     return filtered
 
-# def _parse_duration(x):
-#     h, m, s = map(int, x.split(":"))
-#     if h >= 24:
-#         h -= 24
-#     return pd.Timedelta(hours=h, minutes=m, seconds=s)
-
-def filter_trips_now(df: pd.DataFrame) -> pd.DataFrame:
-    """Doesn't filter for trips not today, just by time
-
-    Args:
-        df (pd.DataFrame): _description_
+def _get_datetime_now() -> datetime:
+    """Return specific datetime (if required for testing)
 
     Returns:
-        pd.DataFrame: _description_
+        datetime: _description_
     """
-    tmp = df[["trip_id", "arrival_time", "departure_time"]]
-    tmp["row_min"] = df[["arrival_time", "departure_time"]].min(axis=1)
-    tmp["row_max"] = df[["arrival_time", "departure_time"]].max(axis=1)
+    # tomorrow @ 0h30
+    # tomorrow = datetime.now() + pd.Timedelta(days=1)
+    # return tomorrow.replace(hour=00, minute=30, second=30)
     
-    grpd = tmp.groupby("trip_id")
-    trips_min_max = grpd.agg({
-        "row_min": "min",
-        "row_max": "max"
-    }).reset_index()
-    
-    now = pd.to_timedelta(datetime.now().strftime("%H:%M:%S"))
-
-    trips_min_max["row_min"] = pd.to_timedelta(trips_min_max["row_min"])
-    trips_min_max["row_max"] = pd.to_timedelta(trips_min_max["row_max"])
-
-    filtered = trips_min_max[
-        (now >= trips_min_max["row_min"]) &
-        (now <= trips_min_max["row_max"])
-    ]
-    trip_ids_now = filtered["trip_id"].drop_duplicates()
-    
-    return df[df["trip_id"].isin(trip_ids_now)]
-
-# def _parse_overflow_time(x):
-#     h, m, s = map(int, x.split(":"))
-#     if h >= 24:
-#         h -= 24
-#     return f"{h:02d}:{m:02d}:{s:02d}"
+    return datetime.now()
 
 def get_tue_stop_times_today() -> pd.DataFrame:
-    dt_now = datetime.now()
+    dt_now = _get_datetime_now()
     hr_now = dt_now.hour
     
     # Deal with night buses: Assumption is that they belong to the previous day until 4am
@@ -109,6 +77,42 @@ def get_tue_stop_times_today() -> pd.DataFrame:
     merged = tue_stop_times.merge(tue_stops, on="stop_id")
     
     return merged
+
+def filter_trips_now(df: pd.DataFrame) -> pd.DataFrame:
+    """Doesn't filter for trips not today, just by time
+
+    Args:
+        df (pd.DataFrame): _description_
+
+    Returns:
+        pd.DataFrame: _description_
+    """
+    tmp = df[["trip_id", "arrival_time", "departure_time"]]
+    tmp["row_min"] = df[["arrival_time", "departure_time"]].min(axis=1)
+    tmp["row_max"] = df[["arrival_time", "departure_time"]].max(axis=1)
+    
+    grpd = tmp.groupby("trip_id")
+    trips_min_max = grpd.agg({
+        "row_min": "min",
+        "row_max": "max"
+    }).reset_index()
+    
+    now = _get_datetime_now()
+    now_tdelta = pd.to_timedelta(_get_datetime_now().strftime("%H:%M:%S"))
+    if now.hour < NEXT_DAY_BORDER_HR:
+        now_tdelta += pd.Timedelta(days=1)
+
+    trips_min_max["row_min"] = pd.to_timedelta(trips_min_max["row_min"])
+    trips_min_max["row_max"] = pd.to_timedelta(trips_min_max["row_max"])
+
+    filtered = trips_min_max[
+        (now_tdelta >= trips_min_max["row_min"]) &
+        (now_tdelta <= trips_min_max["row_max"])
+    ]
+    trip_ids_now = filtered["trip_id"].drop_duplicates()
+    
+    return df[df["trip_id"].isin(trip_ids_now)]
+
 
 def add_lines_to_stop_times(stop_times_df: pd.DataFrame) -> pd.DataFrame:
     routes_table = get_tue_routes_table()
@@ -134,7 +138,7 @@ def get_stop_times(trip_id):
 
 
 def get_prev_and_next_stop(merged):
-    now = datetime.now().strftime("%H:%M:%S")
+    now = _get_datetime_now().strftime("%H:%M:%S")
 
     for i in range(1, len(merged)):
         prev_row = merged.iloc[i - 1]
@@ -165,7 +169,7 @@ def get_trip_pos(trip_id):
     dy = y1 - y0
 
     # --- time conversion ---
-    now = datetime.strptime(datetime.now().strftime("%H:%M:%S"), "%H:%M:%S")
+    now = datetime.strptime(_get_datetime_now().strftime("%H:%M:%S"), "%H:%M:%S")
     t0 = datetime.strptime(stops_frame.iloc[0]["departure_time"], "%H:%M:%S")
     t1 = datetime.strptime(stops_frame.iloc[1]["arrival_time"], "%H:%M:%S")
 

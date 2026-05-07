@@ -3,8 +3,10 @@ console.log("script started");
 const url = "http://localhost:5001";
 let alive = true;
 
-const freqBusUpdateSec = 0.1;
+const freqBusUpdateSec = 1;
 const sparseBusUpdateSec = 30; // Update every 30s
+
+const NEXT_DAY_BORDER_HR = 4; // 4am is the border for night buses, they belong to the previous day until then
 
 async function getAllPolylines() {
     const response = await fetch(`${url}/get-all-polylines`, { method: "POST" });
@@ -31,26 +33,6 @@ async function getAllStops() {
     }
 }
 
-// async function getAllBuses() {
-//     console.log("awaiting");
-//     const response = await fetch(`${url}/get-all-buses`, { method: "POST" });
-//     const data = await response.json();
-//     console.log("got it");
-
-//     clearBusMarkers();
-//     console.log(data.curr_pos.length);
-//     for (let i = 0; i < data.curr_pos.length; i++) {
-//         coord = data.curr_pos[i];
-//         line = data.route_short_name[i];
-//         descr = data.route_long_name[i];
-//         trip = data.trip_id[i];
-//         popup = `<h3>Linie ${line}</h3>${descr}`
-//         addBusMarker(coord, popup, label = line, trip = trip);
-//     }
-
-//     console.log("updated");
-// }
-
 function timeToSeconds(t) {
     const [h, m, s] = t.split(":").map(Number);
     return h * 3600 + m * 60 + s;
@@ -58,8 +40,13 @@ function timeToSeconds(t) {
 
 function getCurrentTimeInSeconds() {
     const now = new Date();
+    // now.setHours(0, 30); // Set to 0:30 for night bus testing
+    let hrNow = now.getHours();
+    // Overflow handling for night buses, they belong to the previous day until NEXT_DAY_BORDER_HR
+    hrNow = hrNow < NEXT_DAY_BORDER_HR ? hrNow + 24 : hrNow;
+    
     const currentTime =
-        now.getHours() * 3600 +
+        hrNow * 3600 +
         now.getMinutes() * 60 +
         now.getSeconds() +
         now.getMilliseconds() / 1000;
@@ -67,8 +54,12 @@ function getCurrentTimeInSeconds() {
 }
 
 function getPrevAndNextStop(arriv_times, dept_times) {
-    const now = new Date();
     const currentTime = getCurrentTimeInSeconds();
+
+    if (currentTime < timeToSeconds(arriv_times[0])) {
+        console.log("Before first stop");
+        return -1;
+    }
 
     for (let i = 1; i < arriv_times.length; i++) {
         prev_arriv = timeToSeconds(arriv_times[i - 1]);
@@ -83,6 +74,8 @@ function getPrevAndNextStop(arriv_times, dept_times) {
             return [i - 1, i - 1];
         }
     }
+
+    console.log('other condition');
     return -1;
 }
 
@@ -127,6 +120,9 @@ async function updateBuses() {
     updates = {};
     Object.entries(basicData).forEach(([idx, tripData]) => {
         prevNext = getPrevAndNextStop(tripData.arrival_time, tripData.departure_time);
+        if (prevNext == -1) {
+            return;
+        }
         const [tripPos, latLonDiff] = getTripPos(tripData, prevNext);
 
         line = tripData.route_short_name;
@@ -173,17 +169,6 @@ let busIntervalId = setInterval(async () => {
         throw error;
     }
 }, freqBusUpdateSec * 1000);
-
-// getAllBuses();
-// let intervalId = setInterval(async () => {
-//     try {
-//         console.log("trying...");
-//         await getAllBuses();
-//     } catch {
-//         console.log("Clearing interval...");
-//         clearInterval(intervalId);
-//     }
-// }, 5000);
 
 window.onbeforeunload = async () => {
     alive = false;
