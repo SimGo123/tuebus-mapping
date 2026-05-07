@@ -11,9 +11,7 @@ async function getAllPolylines() {
     net_pylines = await response.json();
 
     clearPolylines();
-    Object.entries(net_pylines).forEach(([key, line]) => {
-        addPolyline(line, { "color": "gray" });
-    });
+    addPolylines(net_pylines);
     getAllStops();
 }
 

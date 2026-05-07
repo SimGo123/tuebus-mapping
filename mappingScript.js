@@ -83,8 +83,6 @@ function getBusMarker(coord, popupText = "", label = "", trip = null, onclickFun
                     <div class="marker-circle">${label}</div>
                     <div class="marker-arrow"></div>
                 </div>`,
-        // <div class="marker-circle">${label}</div>
-        //        <div class="marker-triangle"></div>`,
         iconSize: [30, 30],
         iconAnchor: [20, 20]
     });
@@ -93,29 +91,31 @@ function getBusMarker(coord, popupText = "", label = "", trip = null, onclickFun
 
     if (popupText) marker.bindPopup(popupText);
 
+    // Highlight line on click (popup opens automatically)
     marker.on("click", () => {
         console.log(label);
         highlightedLine = trip;
         clearPolylines();
-        console.log(trip);
-        Object.entries(net_pylines).forEach(([key, line]) => {
-            if (key != trip) {
-                addPolyline(line, { "color": "gray" });
-            }
-        });
-        addPolyline(net_pylines[trip], { "color": "red" });
+        addPolylines(net_pylines);
+    });
+
+    // Unhighlight line on popup close
+    marker.on("popupclose", function () {
+        highlightedLine = null;
+        clearPolylines();
+        addPolylines(net_pylines);
     });
 
     return marker;
 }
 
 function dlatDlonToAngle(dlat, dlon) {
-  const angleRad = Math.atan2(-dlat, dlon);
-  let angleDeg = angleRad * (180 / Math.PI);
+    const angleRad = Math.atan2(-dlat, dlon);
+    let angleDeg = angleRad * (180 / Math.PI);
 
-  if (angleDeg < 0) angleDeg += 360;
+    if (angleDeg < 0) angleDeg += 360;
 
-  return angleDeg;
+    return angleDeg;
 }
 
 function setArrowDirection(marker, coordDiff) {
@@ -140,7 +140,7 @@ function setArrowDirection(marker, coordDiff) {
 }
 
 // 4. Function: add polyline
-function addPolyline(latlngs, options = {}) {
+function _addPolyline(latlngs, options = {}) {
     const polyline = L.polyline(latlngs, {
         color: options.color || 'blue',
         weight: options.weight || 4
@@ -148,6 +148,15 @@ function addPolyline(latlngs, options = {}) {
 
     polylines.push(polyline);
     return polyline;
+}
+
+function addPolylines(polylinesDict) {
+    Object.entries(polylinesDict).forEach(([key, line]) => {
+        _addPolyline(line, { "color": "gray" });
+    });
+    if (highlightedLine && polylinesDict[highlightedLine]) {
+        _addPolyline(polylinesDict[highlightedLine], { "color": "red" });
+    }
 }
 
 // 5. Optional: clear helpers
@@ -166,7 +175,7 @@ function clearPolylines() {
 }
 
 // Expose to global scope (for console use)
-window.addMarker = addMarker;
-window.addPolyline = addPolyline;
-window.clearMarkers = clearMarkers;
-window.clearPolylines = clearPolylines;
+// window.addMarker = addMarker;
+// window.addPolyline = addPolyline;
+// window.clearMarkers = clearMarkers;
+// window.clearPolylines = clearPolylines;
