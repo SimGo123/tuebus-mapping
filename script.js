@@ -14,6 +14,7 @@ async function getAllPolylines() {
     Object.entries(net_pylines).forEach(([key, line]) => {
         addPolyline(line, { "color": "gray" });
     });
+    getAllStops();
 }
 
 async function getAllStops() {
@@ -90,7 +91,7 @@ function getTripPos(tripData, prevNext) {
     lats = tripData.stop_lat;
     lons = tripData.stop_lon;
     if (prevNext == -1) {
-        return [lats[lats.length-1], lons[lons.length-1]];
+        return [[lats[lats.length-1], lons[lons.length-1]], [0, 0]];
     }
     const [prevStop, nextStop] = prevNext;
     const prevDept = timeToSeconds(tripData.departure_time[prevStop]);
@@ -152,7 +153,6 @@ getBusesFromApi();
 let sparseIntervalId = setInterval(async () => {
     try {
         getAllPolylines();
-        getAllStops();
 
         getBusesFromApi();
     } catch (error) {

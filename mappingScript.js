@@ -49,6 +49,7 @@ function syncBusMarkers(updates) {
     for (const [key, data] of Object.entries(updates)) {
         if (busMarkers[key]) {
             // update existing marker position
+            // console.log(`Updating bus ${key} position to ${data.coord}`);
             busMarkers[key].setLatLng(data.coord);
             // Draw triangle indicating direction on the bus marker
         } else {
@@ -109,7 +110,7 @@ function getBusMarker(coord, popupText = "", label = "", trip = null, onclickFun
 }
 
 function dlatDlonToAngle(dlat, dlon) {
-  const angleRad = Math.atan2(dlat, dlon);
+  const angleRad = Math.atan2(-dlat, dlon);
   let angleDeg = angleRad * (180 / Math.PI);
 
   if (angleDeg < 0) angleDeg += 360;
