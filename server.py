@@ -1,8 +1,6 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
-import pandas as pd
-
 import tuegtfs_utils
 
 app = Flask(__name__)
@@ -38,7 +36,7 @@ def get_bus():
 
 @app.route("/get-all-polylines", methods=["POST"])
 def get_all_route_polylines():
-    print("poly")
+    print("polylines requested...")
     polylines = tuegtfs_utils.get_all_route_polylines()
     return jsonify(polylines)
 
@@ -63,6 +61,7 @@ def get_all_buses():
 
 @app.route("/get-basic-data", methods=["POST"])
 def get_basic_data():
+    print("basic data requested...")
     reduced = tuegtfs_utils.get_tue_stop_times_today()[["trip_id", "arrival_time", "departure_time", "stop_lat", "stop_lon"]]
     filtered = tuegtfs_utils.filter_trips_now(reduced)
     grpd = filtered.groupby("trip_id")

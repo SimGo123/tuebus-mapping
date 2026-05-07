@@ -9,7 +9,8 @@ feed: Feed = gk.read_feed(FEED_ZIP, dist_units="km")
 TUE_COORDS = [48.53, 9.05]
 
 agency: pd.DataFrame = feed.agency
-TUEBUS = list(agency[agency["agency_name"].str.contains("Stadtverkehr Tü")]["agency_id"])[0]
+TUE_AGENCY_NAMES_START = ["Stadtverkehr Tü", "Omnibus Groß"]
+TUE_AGENCIES = list(agency[agency["agency_name"].str.startswith(tuple(TUE_AGENCY_NAMES_START))]["agency_id"])
 
 NEXT_DAY_BORDER_HR = 4
 
@@ -26,15 +27,15 @@ def get_tue_stops() -> pd.DataFrame:
 tue_stops: pd.DataFrame = get_tue_stops()
 
 def get_all_tue_routes():
-    tue_routes = routes[routes["agency_id"].str.fullmatch(TUEBUS)]
+    tue_routes = routes[routes["agency_id"].isin(TUE_AGENCIES)]
     return list(tue_routes["route_id"])
 
 def get_tue_routes_table():
-    ln_row = routes[routes["agency_id"].str.fullmatch(TUEBUS)]
+    ln_row = routes[routes["agency_id"].isin(TUE_AGENCIES)]
     return ln_row
 
 def get_route_ids(line_str):
-    ln_row = routes[routes["route_short_name"].str.fullmatch(line_str) & routes["agency_id"].str.fullmatch(TUEBUS)]
+    ln_row = routes[routes["route_short_name"].str.fullmatch(line_str) & routes["agency_id"].isin(TUE_AGENCIES)]
     ln_ids = list(ln_row["route_id"])
     return ln_ids
 
@@ -80,11 +81,11 @@ def filter_trips_now(df: pd.DataFrame) -> pd.DataFrame:
     
     return df[df["trip_id"].isin(trip_ids_now)]
 
-def _parse_overflow_time(x):
-    h, m, s = map(int, x.split(":"))
-    if h >= 24:
-        h -= 24
-    return f"{h:02d}:{m:02d}:{s:02d}"
+# def _parse_overflow_time(x):
+#     h, m, s = map(int, x.split(":"))
+#     if h >= 24:
+#         h -= 24
+#     return f"{h:02d}:{m:02d}:{s:02d}"
 
 def get_tue_stop_times_today() -> pd.DataFrame:
     dt_now = datetime.now()
