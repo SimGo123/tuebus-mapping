@@ -1,18 +1,23 @@
 import gtfs_kit as gk
 import pandas as pd
+import os
+import json
 from gtfs_kit import Feed
 from datetime import datetime
 
-FEED_ZIP = "naldo.zip"
+folder = os.path.dirname(os.path.abspath(__file__))
+FEED_ZIP = os.path.join(folder, "naldo.zip")
 feed: Feed = gk.read_feed(FEED_ZIP, dist_units="km")
 
 TUE_COORDS = [48.53, 9.05]
 
 agency: pd.DataFrame = feed.agency
-TUE_AGENCY_NAMES_START = ["Stadtverkehr Tü", "Omnibus Groß"]
+TUE_AGENCY_NAMES_START = ["Stadtverkehr Tü", "Omnibus Groß", "Friedrich Müller Omni"]
 TUE_AGENCIES = list(agency[agency["agency_name"].str.startswith(tuple(TUE_AGENCY_NAMES_START))]["agency_id"])
 
 NEXT_DAY_BORDER_HR = 4
+
+PRECALC_ROUTES_FILE = os.path.join(folder, "street-routes", "tue_map_routes.json")
 
 routes: pd.DataFrame = feed.routes
 stop_times: pd.DataFrame = feed.stop_times
@@ -192,9 +197,35 @@ def get_coords(df):
     return coords
 
 
-def get_all_route_polylines() -> dict:
+def get_all_route_polylines() -> list:
+    # stop_times_now = filter_trips_now(get_tue_stop_times_today()) # get_tue_stop_times_today()
+    # grpd = stop_times_now.groupby("trip_id")
+    # agg = grpd[["stop_lat", "stop_lon"]].agg(list)
+    # coords = agg.apply(lambda r: list(zip(r["stop_lat"], r["stop_lon"])), axis=1)
+    # return coords.to_dict()
+    
     stop_times_now = filter_trips_now(get_tue_stop_times_today()) # get_tue_stop_times_today()
     grpd = stop_times_now.groupby("trip_id")
     agg = grpd[["stop_lat", "stop_lon"]].agg(list)
     coords = agg.apply(lambda r: list(zip(r["stop_lat"], r["stop_lon"])), axis=1)
-    return coords.to_dict()
+
+    # Get all stop pairs
+    stop_pairs_now = [list(zip(stops[:-1], stops[1:])) for stops in coords]
+    stop_pairs_now_flat = [pair for pairs in stop_pairs_now for pair in pairs]
+    stop_pairs_now_set = set(stop_pairs_now_flat)
+
+    with open(PRECALC_ROUTES_FILE, "r") as f:
+        routes = json.load(f)
+
+    to_draw = []
+    ec = 0
+    for pair in stop_pairs_now_set:
+        # Search for stop pairs in pre-calculated routes
+        if str(pair) in routes:
+            to_draw.append(routes[str(pair)]["route_coords"])
+        else:
+            ec += 1
+            to_draw.append(list(pair)) # Just draw a straight line if no route is found
+    print(f"Number of routes found: {len(to_draw)}")
+    print(f"Number of routes not found: {ec}")
+    return to_draw
