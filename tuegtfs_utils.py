@@ -197,7 +197,7 @@ def get_coords(df):
     return coords
 
 
-def get_all_route_polylines() -> list:
+def get_all_route_polylines() -> dict:
     # stop_times_now = filter_trips_now(get_tue_stop_times_today()) # get_tue_stop_times_today()
     # grpd = stop_times_now.groupby("trip_id")
     # agg = grpd[["stop_lat", "stop_lon"]].agg(list)

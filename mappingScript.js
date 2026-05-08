@@ -89,6 +89,14 @@ function getBusMarker(coord, popupText = "", label = "", trip = null, onclickFun
 
     const marker = L.marker([lat, lng], { icon }).addTo(map);
 
+    // make bigger for longer labels (line numbers, ie "X82", "828" or night buses)
+    if (label.length >= 3) {
+        const el = marker.getElement();
+        const circle = el.querySelector(".marker-circle");
+        circle.style.width = "25px";
+        circle.style.height = "25px";
+    }
+
     if (popupText) marker.bindPopup(popupText);
 
     // Highlight line on click (popup opens automatically)
