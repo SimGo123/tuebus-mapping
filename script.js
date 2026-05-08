@@ -3,10 +3,12 @@ console.log("script started");
 const url = "http://localhost:5001";
 let alive = true;
 
-const freqBusUpdateSec = 0.3;
+const freqBusUpdateSec = 0.1;
 const sparseBusUpdateSec = 30; // Update every 30s
 
 const NEXT_DAY_BORDER_HR = 4; // 4am is the border for night buses, they belong to the previous day until then
+
+var stopsDict = null;
 
 async function getAllPolylines() {
     const response = await fetch(`${url}/get-all-polylines`, { method: "POST" });
@@ -19,14 +21,13 @@ async function getAllPolylines() {
 
 async function getAllStops() {
     const response = await fetch(`${url}/get-all-stops`, { method: "POST" });
-    data = await response.json();
+    stopsDict = await response.json();
 
     clearMarkers();
-    for (let i = 0; i < data.stop_id.length; i++) {
-        stop_id = data.stop_id[i];
-        stop_name = data.stop_name[i];
-        lat = data.stop_lat[i];
-        lon = data.stop_lon[i];
+    for (const [stopId, stopData] of Object.entries(stopsDict)) {
+        stop_name = stopData.stop_name;
+        lat = stopData.stop_lat;
+        lon = stopData.stop_lon;
         coord = [lat, lon];
         popup = `<h3>${stop_name}</h3>`
         addStopMarker(coord, popup);
@@ -160,6 +161,15 @@ async function getBusesFromApi() {
     updateBuses();
 }
 
+function getDescrInOrder(description, lastStopName) {
+    splitted = description.split("-");
+    spl0 = splitted[0].trim().replace("(", "").replace(")", "");
+    if (spl0.includes(lastStopName) || lastStopName.includes(spl0)) {
+        return splitted.reverse().join(" - ").replace("(", "").replace(")", "");
+    }
+    return description;
+}
+
 async function updateBuses() {
     if (basicData == null) {
         console.log("Basic data not loaded yet.");
@@ -179,7 +189,10 @@ async function updateBuses() {
             line = tripData.route_short_name;
             descr = tripData.route_long_name;
             tripId = tripData.trip_id;
-            popup = `<h3>Linie ${line}</h3>${descr}`;
+            lastStopId = tripData.stop_id[tripData.stop_id.length - 1];
+            lastStopName = stopsDict[lastStopId] ? stopsDict[lastStopId].stop_name : "Unknown stop";
+            descr = getDescrInOrder(descr, lastStopName);
+            popup = `<h3>${line} ${lastStopName}</h3>${descr}`;
 
             updates[tripId] = { coord: tripPos, popup: popup, label: line, latLonDiff: latLonDiff };
         }

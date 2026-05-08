@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from gtfs_kit import stops
 
 import tuegtfs_utils
 
@@ -44,8 +45,8 @@ def get_all_route_polylines():
 def get_all_stops():
     stops = tuegtfs_utils.get_tue_stops()
     stops = stops[["stop_id", "stop_name", "stop_lat", "stop_lon"]]
-    stops_list = stops.to_dict(orient="list")
-    return jsonify(stops_list)
+    stops_dict = stops.set_index("stop_id").to_dict(orient="index")
+    return jsonify(stops_dict)
 
 @app.route("/get-all-buses", methods=["POST"])
 def get_all_buses():
@@ -62,10 +63,10 @@ def get_all_buses():
 @app.route("/get-basic-data", methods=["POST"])
 def get_basic_data():
     print("basic data requested...")
-    reduced = tuegtfs_utils.get_tue_stop_times_today()[["trip_id", "arrival_time", "departure_time", "stop_lat", "stop_lon"]]
+    reduced = tuegtfs_utils.get_tue_stop_times_today()[["trip_id", "arrival_time", "departure_time", "stop_lat", "stop_lon", "stop_id"]]
     filtered = tuegtfs_utils.filter_trips_now(reduced)
     grpd = filtered.groupby("trip_id")
-    agg = grpd[["arrival_time", "departure_time", "stop_lat", "stop_lon"]].agg(list).reset_index()
+    agg = grpd[["arrival_time", "departure_time", "stop_lat", "stop_lon", "stop_id"]].agg(list).reset_index()
     agg_lines = tuegtfs_utils.add_lines_to_stop_times(agg)
     agg_lines_dict = agg_lines.to_dict(orient="index")
     return jsonify(agg_lines_dict)
