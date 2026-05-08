@@ -151,12 +151,12 @@ function _addPolyline(latlngs, options = {}) {
 }
 
 function addPolylines(polylinesDict) {
-    polylinesDict.forEach(line => {
+    Object.values(polylinesDict).forEach(line => {
         _addPolyline(line, { "color": "gray" });
     });
-    // if (highlightedLine && polylinesDict[highlightedLine]) {
-    //     _addPolyline(polylinesDict[highlightedLine], { "color": "red" });
-    // }
+    if (highlightedLine && polylinesDict[highlightedLine]) {
+        _addPolyline(polylinesDict[highlightedLine], { "color": "red" });
+    }
 }
 
 // 5. Optional: clear helpers

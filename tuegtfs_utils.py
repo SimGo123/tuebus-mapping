@@ -208,24 +208,20 @@ def get_all_route_polylines() -> list:
     grpd = stop_times_now.groupby("trip_id")
     agg = grpd[["stop_lat", "stop_lon"]].agg(list)
     coords = agg.apply(lambda r: list(zip(r["stop_lat"], r["stop_lon"])), axis=1)
-
-    # Get all stop pairs
-    stop_pairs_now = [list(zip(stops[:-1], stops[1:])) for stops in coords]
-    stop_pairs_now_flat = [pair for pairs in stop_pairs_now for pair in pairs]
-    stop_pairs_now_set = set(stop_pairs_now_flat)
-
+    
     with open(PRECALC_ROUTES_FILE, "r") as f:
         routes = json.load(f)
-
-    to_draw = []
-    ec = 0
-    for pair in stop_pairs_now_set:
-        # Search for stop pairs in pre-calculated routes
+    
+    def process_pair(pair):
         if str(pair) in routes:
-            to_draw.append(routes[str(pair)]["route_coords"])
+            return routes[str(pair)]["route_coords"]
         else:
-            ec += 1
-            to_draw.append(list(pair)) # Just draw a straight line if no route is found
-    print(f"Number of routes found: {len(to_draw)}")
-    print(f"Number of routes not found: {ec}")
-    return to_draw
+            return list(pair) # Just draw a straight line if no route is found
+
+    coords = coords.apply(lambda r: list(zip(r[:-1], r[1:])))
+    # replace pairs with route coords
+    coords = coords.apply(lambda r: [process_pair(pair) for pair in r])
+    # flatten
+    coords = coords.apply(lambda r: [pair for pairs in r for pair in pairs])
+
+    return coords.to_dict()
