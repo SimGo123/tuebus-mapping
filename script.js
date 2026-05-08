@@ -44,7 +44,7 @@ function getCurrentTimeInSeconds() {
     let hrNow = now.getHours();
     // Overflow handling for night buses, they belong to the previous day until NEXT_DAY_BORDER_HR
     hrNow = hrNow < NEXT_DAY_BORDER_HR ? hrNow + 24 : hrNow;
-    
+
     const currentTime =
         hrNow * 3600 +
         now.getMinutes() * 60 +
@@ -75,7 +75,8 @@ function getPrevAndNextStop(arriv_times, dept_times) {
         }
     }
 
-    console.log('other condition');
+    // After last stop
+    console.log('after last stop');
     return -1;
 }
 
@@ -92,7 +93,7 @@ function getTripPos(tripData, prevNext) {
     const [prevLat, prevLon] = [lats[prevStop], lons[prevStop]];
     const [nextLat, nextLon] = [lats[nextStop], lons[nextStop]];
     const currentTime = getCurrentTimeInSeconds();
-    
+
     const ratio = (currentTime - prevDept) / (nextArriv - prevDept);
 
     const tripCoords = net_pylines[tripId];
@@ -166,25 +167,27 @@ async function updateBuses() {
     }
 
     console.time("busUpdate");
-    updates = {};
-    for (const [idx, tripData] of Object.entries(basicData)) {
-        prevNext = getPrevAndNextStop(tripData.arrival_time, tripData.departure_time);
-        if (prevNext == -1) {
-            return;
+    try {
+        updates = {};
+        for (const [idx, tripData] of Object.entries(basicData)) {
+            prevNext = getPrevAndNextStop(tripData.arrival_time, tripData.departure_time);
+            if (prevNext == -1) {
+                return;
+            }
+            const [tripPos, latLonDiff] = getTripPos(tripData, prevNext);
+
+            line = tripData.route_short_name;
+            descr = tripData.route_long_name;
+            tripId = tripData.trip_id;
+            popup = `<h3>Linie ${line}</h3>${descr}`;
+
+            updates[tripId] = { coord: tripPos, popup: popup, label: line, latLonDiff: latLonDiff };
         }
-        const [tripPos, latLonDiff] = getTripPos(tripData, prevNext);
 
-        line = tripData.route_short_name;
-        descr = tripData.route_long_name;
-        tripId = tripData.trip_id;
-        popup = `<h3>Linie ${line}</h3>${descr}`;
-
-        updates[tripId] = { coord: tripPos, popup: popup, label: line, latLonDiff: latLonDiff };
+        syncBusMarkers(updates);
+    } finally {
+        console.timeEnd("busUpdate");
     }
-
-    syncBusMarkers(updates);
-
-    console.timeEnd("busUpdate");
 }
 
 exCoord = [48.53, 9.03];
