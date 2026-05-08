@@ -108,7 +108,8 @@ def filter_trips_now(df: pd.DataFrame) -> pd.DataFrame:
         now_tdelta += pd.Timedelta(days=1)
 
     trips_min_max["row_min"] = pd.to_timedelta(trips_min_max["row_min"])
-    trips_min_max["row_max"] = pd.to_timedelta(trips_min_max["row_max"])
+    # Timedelta for sparse updates (already have lines that start a bit later)
+    trips_min_max["row_max"] = pd.to_timedelta(trips_min_max["row_max"]) + pd.Timedelta(minutes=2)
 
     filtered = trips_min_max[
         (now_tdelta >= trips_min_max["row_min"]) &

@@ -99,7 +99,7 @@ function getTripPos(tripData, prevNext) {
     const tripCoords = net_pylines[tripId];
     if (tripCoords) {
         metersPerDegLat = 111_320;
-        const radius_m = 25; // 50m radius for matching stops to polyline coords
+        const radius_m = 35; // 50m radius for matching stops to polyline coords
         const eps_lat = radius_m / metersPerDegLat;
         const epsLon = radius_m / (metersPerDegLat * Math.cos(48.53 * Math.PI / 180));
 
@@ -166,13 +166,13 @@ async function updateBuses() {
         return;
     }
 
-    console.time("busUpdate");
+    // console.time("busUpdate");
     try {
         updates = {};
         for (const [idx, tripData] of Object.entries(basicData)) {
             prevNext = getPrevAndNextStop(tripData.arrival_time, tripData.departure_time);
             if (prevNext == -1) {
-                return;
+                continue;
             }
             const [tripPos, latLonDiff] = getTripPos(tripData, prevNext);
 
@@ -186,7 +186,7 @@ async function updateBuses() {
 
         syncBusMarkers(updates);
     } finally {
-        console.timeEnd("busUpdate");
+        // console.timeEnd("busUpdate");
     }
 }
 
