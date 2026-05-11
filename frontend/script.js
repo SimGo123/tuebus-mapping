@@ -1,9 +1,9 @@
 console.log("script started");
 
-const url = "http://localhost:5001";
+const url = "/cgi-bin/app.cgi"; //"http://localhost:5001";
 let alive = true;
 
-const freqBusUpdateSec = 0.1;
+const freqBusUpdateSec = 0.3;
 const sparseBusUpdateSec = 30; // Update every 30s
 
 const NEXT_DAY_BORDER_HR = 4; // 4am is the border for night buses, they belong to the previous day until then

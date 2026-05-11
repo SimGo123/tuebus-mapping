@@ -162,7 +162,7 @@ def get_trip_pos(trip_id):
     try:
         stops_frame = get_prev_and_next_stop(stop_times_mgd)
     except ValueError:
-        print("Already too late, returning last stop pos...")
+        # print("Already too late, returning last stop pos...")
         last_row = stop_times_mgd.iloc[-1]
         return (last_row["stop_lat"], last_row["stop_lon"])
 
@@ -199,12 +199,6 @@ def get_coords(df):
 
 
 def get_all_route_polylines() -> dict:
-    # stop_times_now = filter_trips_now(get_tue_stop_times_today()) # get_tue_stop_times_today()
-    # grpd = stop_times_now.groupby("trip_id")
-    # agg = grpd[["stop_lat", "stop_lon"]].agg(list)
-    # coords = agg.apply(lambda r: list(zip(r["stop_lat"], r["stop_lon"])), axis=1)
-    # return coords.to_dict()
-    
     stop_times_now = filter_trips_now(get_tue_stop_times_today()) # get_tue_stop_times_today()
     grpd = stop_times_now.groupby("trip_id")
     agg = grpd[["stop_lat", "stop_lon"]].agg(list)
