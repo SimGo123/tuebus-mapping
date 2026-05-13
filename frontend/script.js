@@ -1,9 +1,15 @@
 console.log("script started");
 
-const url = "/cgi-bin/app.cgi"; //"http://localhost:5001";
+const isCgiServer = false;
+if (isCgiServer) {
+    var url = "/cgi-bin/app.cgi";
+} else {
+    var url = "http://localhost:5001";
+}
+
 let alive = true;
 
-const freqBusUpdateSec = 0.3;
+const freqBusUpdateSec = 0.9;
 const sparseBusUpdateSec = 30; // Update every 30s
 
 const NEXT_DAY_BORDER_HR = 4; // 4am is the border for night buses, they belong to the previous day until then
@@ -158,7 +164,7 @@ async function getBusesFromApi() {
     const response = await fetch(`${url}/get-basic-data`, { method: "POST" });
     basicData = await response.json();
     console.log("got it");
-    updateBuses();
+    updateBuses(true);
 }
 
 function getDescrInOrder(description, lastStopName) {
@@ -170,7 +176,7 @@ function getDescrInOrder(description, lastStopName) {
     return description;
 }
 
-async function updateBuses() {
+async function updateBuses(isFromApi=false) {
     if (basicData == null) {
         console.log("Basic data not loaded yet.");
         return;
@@ -191,13 +197,30 @@ async function updateBuses() {
             tripId = tripData.trip_id;
             lastStopId = tripData.stop_id[tripData.stop_id.length - 1];
             lastStopName = stopsDict[lastStopId] ? stopsDict[lastStopId].stop_name : "Unknown stop";
+            lastStopName = lastStopName.replace("Tübingen ", "").replace("Ahornweg", "WHO").replace("Ulmenweg", "WHO");
             descr = getDescrInOrder(descr, lastStopName);
-            popup = `<h3>${line} ${lastStopName}</h3>${descr}`;
+            all_stop_names = tripData.stop_id.map(stopId => stopsDict[stopId] ? stopsDict[stopId].stop_name : "Unknown stop");
+            all_stop_names = all_stop_names.map(name => name.replace("Tübingen ", ""));
+            descr += "<br><br><div class='stop-list'>"
+            colStyles = [];
+            for (let i = 0; i < all_stop_names.length; i++) {
+                let colStyle = "";
+                if (i == prevNext[1]) {
+                    colStyle = "color: red; font-weight: bold;";
+                    colStyles.push(colStyle);
+                } else if (i < prevNext[1]) {
+                    colStyle = "color: gray;";
+                    colStyles.push(colStyle);
+                }
+                descr += `<div class='stop-item' style='${colStyle}'><b>${i + 1}.</b> ${all_stop_names[i]}</div>`;
+            }
+            descr += "</div></div>";
+            popup = `<h3>${line}: ${lastStopName}</h3>${descr}`;
 
-            updates[tripId] = { coord: tripPos, popup: popup, label: line, latLonDiff: latLonDiff };
+            updates[tripId] = { coord: tripPos, popup: popup, label: line, latLonDiff: latLonDiff, colStyles: colStyles };
         }
 
-        syncBusMarkers(updates);
+        syncBusMarkers(updates, isFromApi);
     } finally {
         // console.timeEnd("busUpdate");
     }

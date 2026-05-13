@@ -42,7 +42,7 @@ function addStopMarker(coord, popupText = "") {
     return marker;
 }
 
-function syncBusMarkers(updates) {
+function syncBusMarkers(updates, sparseUd) {
     const nextKeys = new Set(Object.keys(updates));
 
     // 1. Update existing + add new
@@ -51,6 +51,14 @@ function syncBusMarkers(updates) {
             // update existing marker position
             // console.log(`Updating bus ${key} position to ${data.coord}`);
             busMarkers[key].setLatLng(data.coord);
+
+            // Update which station gets which color in the popup
+            const popupEl = busMarkers[key].getPopup().getElement();
+            if (popupEl) {
+                popupEl.querySelectorAll('.stop-item').forEach((el, i) => {
+                    el.style = data.colStyles[i];
+                });
+            }
             // Draw triangle indicating direction on the bus marker
         } else {
             // create new marker

@@ -49,3 +49,25 @@
 
   transform: translate(-50%, -50%) translate(18px, 0px);
 }
+
+
+.stop-list {
+  width: 250px;
+  height: 100px;
+  /* fixed height */
+  overflow-y: auto;
+  /* vertical scrolling */
+  border: 1px solid #ccc;
+  padding: 10px;
+  border-radius: 8px;
+  font-family: Arial, sans-serif;
+}
+
+.stop-item {
+  padding: 6px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.stop-item:last-child {
+  border-bottom: none;
+}
