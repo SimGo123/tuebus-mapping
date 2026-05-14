@@ -14,14 +14,12 @@ const sparseBusUpdateSec = 30; // Update every 30s
 
 const NEXT_DAY_BORDER_HR = 4; // 4am is the border for night buses, they belong to the previous day until then
 
-var stopsDict = null;
-
 async function getAllPolylines() {
     const response = await fetch(`${url}/get-all-polylines`, { method: "POST" });
     net_pylines = await response.json();
 
     clearPolylines();
-    addPolylines(net_pylines);
+    addPolylines();
     getAllStops();
 }
 
@@ -29,15 +27,8 @@ async function getAllStops() {
     const response = await fetch(`${url}/get-all-stops`, { method: "POST" });
     stopsDict = await response.json();
 
-    clearMarkers();
-    for (const [stopId, stopData] of Object.entries(stopsDict)) {
-        stop_name = stopData.stop_name;
-        lat = stopData.stop_lat;
-        lon = stopData.stop_lon;
-        coord = [lat, lon];
-        popup = `<h3>${stop_name}</h3>`
-        addStopMarker(coord, popup);
-    }
+    clearStopMarkers();
+    addStopMarkers();
 }
 
 function timeToSeconds(t) {
@@ -83,7 +74,6 @@ function getPrevAndNextStop(arriv_times, dept_times) {
     }
 
     // After last stop
-    console.log('after last stop');
     return -1;
 }
 
@@ -92,6 +82,7 @@ function getTripPos(tripData, prevNext) {
     const lats = tripData.stop_lat;
     const lons = tripData.stop_lon;
     if (prevNext == -1) {
+        console.log('after last stop', tripData);
         return [[lats[lats.length - 1], lons[lons.length - 1]], [0, 0]];
     }
     const [prevStop, nextStop] = prevNext;
@@ -170,10 +161,35 @@ async function getBusesFromApi() {
 function getDescrInOrder(description, lastStopName) {
     splitted = description.split("-");
     spl0 = splitted[0].trim().replace("(", "").replace(")", "");
-    if (spl0.includes(lastStopName) || lastStopName.includes(spl0)) {
+    lsn = lastStopName.replace("Ri. ", "").trim();
+    if (spl0.includes(lsn) || lsn.includes(spl0) || (spl0 == "Tübingen" && lsn.includes("Hauptbahnhof"))) {
         return splitted.reverse().join(" - ").replace("(", "").replace(")", "");
     }
     return description;
+}
+
+function _getShortStopName(stopId) {
+    let shortStopName = stopsDict[stopId] ? stopsDict[stopId].stop_name : "Unknown stop";
+    shortStopName = shortStopName
+        .replace("Tübingen ", "")
+        .replace("Ahornweg", "Waldhäuser Ost")
+        .replace("Ulmenweg", "Wakdhäuser Ost")
+        .replace("Kleiststraße", "Österberg")
+        .replace("Carlo-Steeb-Str.", "Aeulestraße")
+        .replace("Wennf. Garten", "Wennfelder Garten")
+        .replace("Nelkenweg", "Gartenstadt");
+    if (shortStopName.includes("Hagelloch")) {
+        shortStopName = "Hagelloch";
+    } else if (shortStopName.includes("Pfrondorf")) {
+        shortStopName = "Pfrondorf";
+    } else if (shortStopName.includes("Derend")) {
+        shortStopName = "Derendingen";
+    } else if (shortStopName.includes("Waldenbuch")) {
+        shortStopName = "Ri. Flughafen";
+    } else if (shortStopName.includes("Rottenburg")) {
+        shortStopName = "Rottenburg";
+    }
+    return shortStopName;
 }
 
 async function updateBuses(isFromApi=false) {
@@ -196,8 +212,7 @@ async function updateBuses(isFromApi=false) {
             descr = tripData.route_long_name;
             tripId = tripData.trip_id;
             lastStopId = tripData.stop_id[tripData.stop_id.length - 1];
-            lastStopName = stopsDict[lastStopId] ? stopsDict[lastStopId].stop_name : "Unknown stop";
-            lastStopName = lastStopName.replace("Tübingen ", "").replace("Ahornweg", "WHO").replace("Ulmenweg", "WHO");
+            lastStopName = _getShortStopName(lastStopId);
             descr = getDescrInOrder(descr, lastStopName);
             all_stop_names = tripData.stop_id.map(stopId => stopsDict[stopId] ? stopsDict[stopId].stop_name : "Unknown stop");
             all_stop_names = all_stop_names.map(name => name.replace("Tübingen ", ""));
@@ -209,7 +224,7 @@ async function updateBuses(isFromApi=false) {
                     colStyle = "color: red; font-weight: bold;";
                     colStyles.push(colStyle);
                 } else if (i < prevNext[1]) {
-                    colStyle = "color: gray;";
+                    colStyle = "color: gray; display: none;";
                     colStyles.push(colStyle);
                 }
                 descr += `<div class='stop-item' style='${colStyle}'><b>${i + 1}.</b> ${all_stop_names[i]}</div>`;
@@ -217,7 +232,7 @@ async function updateBuses(isFromApi=false) {
             descr += "</div></div>";
             popup = `<h3>${line}: ${lastStopName}</h3>${descr}`;
 
-            updates[tripId] = { coord: tripPos, popup: popup, label: line, latLonDiff: latLonDiff, colStyles: colStyles };
+            updates[tripId] = { coord: tripPos, popup: popup, label: line, latLonDiff: latLonDiff, colStyles: colStyles, stopIds: tripData.stop_id };
         }
 
         syncBusMarkers(updates, isFromApi);

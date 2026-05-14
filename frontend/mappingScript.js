@@ -7,12 +7,13 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 
 // Store layers so we can manage them later
-const markers = [];
-const polylines = [];
-
+var stopMarkers = [];
 var busMarkers = {};
 
+const polylines = [];
+
 var highlightedLine = null;
+var stopIdsToHighlight = null;
 
 // 3. Function: add marker
 function addMarker(coord, popupText = "") {
@@ -20,25 +21,7 @@ function addMarker(coord, popupText = "") {
     const lng = coord[1];
     const marker = L.marker([lat, lng]).addTo(map);
     if (popupText) marker.bindPopup(popupText);
-    markers.push(marker);
-    return marker;
-}
-
-function addStopMarker(coord, popupText = "") {
-    const lat = coord[0];
-    const lng = coord[1];
-
-    const marker = L.circleMarker([lat, lng], {
-        radius: 4,          // size of the dot
-        color: "#0066ff",   // border color
-        fillColor: "#3399ff",
-        fillOpacity: 1,
-        weight: 2
-    }).addTo(map);
-
-    if (popupText) marker.bindPopup(popupText);
-
-    markers.push(marker);
+    stopMarkers.push(marker);
     return marker;
 }
 
@@ -62,7 +45,7 @@ function syncBusMarkers(updates, sparseUd) {
             // Draw triangle indicating direction on the bus marker
         } else {
             // create new marker
-            busMarkers[key] = getBusMarker(data.coord, popupText = data.popup, label = data.label, trip = key);
+            busMarkers[key] = getBusMarker(data.coord, popupText = data.popup, label = data.label, trip = key, stopIds = data.stopIds);
         }
         setArrowDirection(busMarkers[key], data.latLonDiff);
     }
@@ -76,7 +59,7 @@ function syncBusMarkers(updates, sparseUd) {
     }
 }
 
-function getBusMarker(coord, popupText = "", label = "", trip = null, onclickFunc) {
+function getBusMarker(coord, popupText = "", label = "", trip = null, stopIds = null) {
     const lat = coord[0];
     const lng = coord[1];
 
@@ -112,14 +95,22 @@ function getBusMarker(coord, popupText = "", label = "", trip = null, onclickFun
         console.log(label);
         highlightedLine = trip;
         clearPolylines();
-        addPolylines(net_pylines);
+        addPolylines();
+
+        clearStopMarkers();
+        stopIdsToHighlight = stopIds;
+        addStopMarkers();
     });
 
     // Unhighlight line on popup close
     marker.on("popupclose", function () {
         highlightedLine = null;
         clearPolylines();
-        addPolylines(net_pylines);
+        addPolylines();
+
+        clearStopMarkers();
+        stopIdsToHighlight = null;
+        addStopMarkers();
     });
 
     return marker;
@@ -166,25 +157,61 @@ function _addPolyline(latlngs, options = {}) {
     return polyline;
 }
 
-function addPolylines(polylinesDict) {
-    Object.values(polylinesDict).forEach(line => {
+function addPolylines() {
+    Object.values(net_pylines).forEach(line => {
         _addPolyline(line, { "color": "gray" });
     });
-    if (highlightedLine && polylinesDict[highlightedLine]) {
-        _addPolyline(polylinesDict[highlightedLine], { "color": "red" });
+    if (highlightedLine && net_pylines[highlightedLine]) {
+        _addPolyline(net_pylines[highlightedLine], { "color": "red" });
     }
 }
 
+function _addStopMarker(coord, popupText = "", color = "#0066ff", fillColor = "#3399ff") {
+    const lat = coord[0];
+    const lng = coord[1];
+
+    const marker = L.circleMarker([lat, lng], {
+        radius: 4,          // size of the dot
+        color: color,       // border color
+        fillColor: fillColor,
+        fillOpacity: 1,
+        weight: 2
+    }).addTo(map);
+
+    if (popupText) marker.bindPopup(popupText);
+
+    stopMarkers.push(marker);
+    return marker;
+}
+
+function addStopMarkers() {
+    let addLater = [];
+    for (const [stopId, stopData] of Object.entries(stopsDict)) {
+        stop_name = stopData.stop_name;
+        stop_name = stop_name.replace("Tübingen ", "").trim();
+        mark_lat = stopData.stop_lat;
+        mark_lon = stopData.stop_lon;
+        coord = [mark_lat, mark_lon];
+        popup = `<h3>${stop_name}</h3>`;
+        if (stopIdsToHighlight && stopIdsToHighlight.includes(stopId)) {
+            addLater.push({"coord": coord, "popup": popup});
+        } else {
+            _addStopMarker(coord, popup);
+        }
+    }
+    // Add highlighted stops later so they are on top of the others
+    addLater.forEach(data => _addStopMarker(data.coord, data.popup, color = "red", fillColor = "orange"));
+}
+
 // 5. Optional: clear helpers
-function clearMarkers() {
-    markers.forEach(m => map.removeLayer(m));
-    markers.length = 0;
+function clearStopMarkers() {
+    stopMarkers.forEach(m => map.removeLayer(m));
+    stopMarkers.length = 0;
 }
 function clearBusMarkers() {
     Object.values(busMarkers).forEach(m => map.removeLayer(m));
     busMarkers = {};
 }
-
 function clearPolylines() {
     polylines.forEach(p => map.removeLayer(p));
     polylines.length = 0;
