@@ -168,7 +168,7 @@ function _getShortStopName(stopId) {
     shortStopName = shortStopName
         .replace("Tübingen ", "")
         .replace("Ahornweg", "Waldhäuser Ost")
-        .replace("Ulmenweg", "Wakdhäuser Ost")
+        .replace("Ulmenweg", "Waldhäuser Ost")
         .replace("Kleiststraße", "Österberg")
         .replace("Carlo-Steeb-Str.", "Aeulestraße")
         .replace("Wennf. Garten", "Wennfelder Garten")
