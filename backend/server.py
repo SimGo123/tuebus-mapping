@@ -1,18 +1,25 @@
 import traceback
 import sys
+from os.path import join, dirname, abspath
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 import tuegtfs_utils as tuegtfs_utils
 
-app = Flask(__name__)
+BASE_DIR = dirname(abspath(__file__))
+
+app = Flask(
+    __name__,
+    static_folder=join(BASE_DIR, "../frontend"),
+    static_url_path="/frontend"
+)
 
 CORS(app)
 
 @app.route("/")
 def home():
-    with open("../index.html", "r") as f:
+    with open(join(BASE_DIR, "../frontend/index.html"), "r") as f:
         return f.read()
 
 # Simple GET endpoint

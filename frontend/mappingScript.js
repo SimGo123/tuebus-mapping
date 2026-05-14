@@ -15,6 +15,8 @@ const polylines = [];
 var highlightedLine = null;
 var stopIdsToHighlight = null;
 
+const deselectBtn = document.getElementById("deselectBtn");
+
 // 3. Function: add marker
 function addMarker(coord, popupText = "") {
     const lat = coord[0];
@@ -94,6 +96,8 @@ function getBusMarker(coord, popupText = "", label = "", trip = null, stopIds = 
     marker.on("click", () => {
         console.log(label);
         highlightedLine = trip;
+        deselectBtn.style.display = "block";
+
         clearPolylines();
         addPolylines();
 
@@ -103,18 +107,33 @@ function getBusMarker(coord, popupText = "", label = "", trip = null, stopIds = 
     });
 
     // Unhighlight line on popup close
-    marker.on("popupclose", function () {
-        highlightedLine = null;
-        clearPolylines();
-        addPolylines();
+    // marker.on("popupclose", function () {
+    //     highlightedLine = null;
+    //     clearPolylines();
+    //     addPolylines();
 
-        clearStopMarkers();
-        stopIdsToHighlight = null;
-        addStopMarkers();
-    });
+    //     clearStopMarkers();
+    //     stopIdsToHighlight = null;
+    //     addStopMarkers();
+    // });
 
     return marker;
 }
+
+deselectBtn.addEventListener("click", () => {
+    highlightedLine = null;
+    clearPolylines();
+    addPolylines();
+
+    clearStopMarkers();
+    stopIdsToHighlight = null;
+    addStopMarkers();
+
+    // Close any open popups
+    Object.values(busMarkers).forEach(marker => marker.closePopup());
+
+    deselectBtn.style.display = "none";
+});
 
 function dlatDlonToAngle(dlat, dlon) {
     const angleRad = Math.atan2(-dlat, dlon);

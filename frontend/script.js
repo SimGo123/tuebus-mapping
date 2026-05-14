@@ -1,11 +1,6 @@
 console.log("script started");
 
-const isCgiServer = false;
-if (isCgiServer) {
-    var url = "/cgi-bin/app.cgi";
-} else {
-    var url = "http://localhost:5001";
-}
+const url = "";
 
 let alive = true;
 
@@ -188,6 +183,8 @@ function _getShortStopName(stopId) {
         shortStopName = "Ri. Flughafen";
     } else if (shortStopName.includes("Rottenburg")) {
         shortStopName = "Rottenburg";
+    } else if (shortStopName.includes("Sand")) {
+        shortStopName = "Sand";
     }
     return shortStopName;
 }
