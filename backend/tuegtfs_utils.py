@@ -23,14 +23,6 @@ routes: pd.DataFrame = feed.routes
 stop_times: pd.DataFrame = feed.stop_times
 stops: pd.DataFrame = feed.stops
 
-def get_tue_stops() -> pd.DataFrame:
-    max_diff = [0.1, 0.15]
-    tue_stops = stops[stops["stop_lat"].apply(lambda x: abs(x - TUE_COORDS[0])) < max_diff[0]]
-    tue_stops = tue_stops[tue_stops["stop_lon"].apply(lambda x: abs(x - TUE_COORDS[1])) < max_diff[1]]
-    return tue_stops
-
-tue_stops: pd.DataFrame = get_tue_stops()
-
 def get_all_tue_routes():
     tue_routes = routes[routes["agency_id"].isin(TUE_AGENCIES)]
     return list(tue_routes["route_id"])
@@ -79,7 +71,7 @@ def get_tue_stop_times_today() -> pd.DataFrame:
     tue_stop_times = stop_times[stop_times["trip_id"].str.contains(routes_joined)]
     tue_stop_times = tue_stop_times[tue_stop_times["trip_id"].str.contains(active_joined)]
     
-    merged = tue_stop_times.merge(tue_stops, on="stop_id")
+    merged = tue_stop_times.merge(stops, on="stop_id")
     
     return merged
 
@@ -135,7 +127,7 @@ def get_stop_times(trip_id):
     stop_times_trip = stop_times[stop_times["trip_id"].str.fullmatch(trip_id)]
     stop_ids = set(stop_times_trip["stop_id"])
 
-    ln_stops = tue_stops[tue_stops["stop_id"].isin(stop_ids)]
+    ln_stops = stops[stops["stop_id"].isin(stop_ids)]
 
     # Merge to sort by time
     merged = stop_times_trip.merge(ln_stops, on="stop_id")
@@ -197,6 +189,11 @@ def get_coords(df):
     coords = [(stop["stop_lat"], stop["stop_lon"]) for _, stop in df.iterrows()]
     return coords
 
+
+def get_tue_stops() -> pd.DataFrame:
+    tue_stop_times = get_tue_stop_times_today()
+    tue_stop_data = tue_stop_times[["stop_id", "stop_name", "stop_lat", "stop_lon"]].drop_duplicates().reset_index(drop=True)
+    return tue_stop_data
 
 def get_all_route_polylines() -> dict:
     stop_times_now = filter_trips_now(get_tue_stop_times_today()) # get_tue_stop_times_today()
