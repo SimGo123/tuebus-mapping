@@ -9,22 +9,7 @@ const sparseBusUpdateSec = 30; // Update every 30s
 
 const NEXT_DAY_BORDER_HR = 4; // 4am is the border for night buses, they belong to the previous day until then
 
-async function getAllPolylines() {
-    const response = await fetch(`${url}/get-all-polylines`, { method: "POST" });
-    net_pylines = await response.json();
-
-    clearPolylines();
-    addPolylines();
-    getAllStops();
-}
-
-async function getAllStops() {
-    const response = await fetch(`${url}/get-all-stops`, { method: "POST" });
-    stopsDict = await response.json();
-
-    clearStopMarkers();
-    addStopMarkers();
-}
+let basicData = null;
 
 function timeToSeconds(t) {
     const [h, m, s] = t.split(":").map(Number);
@@ -109,6 +94,10 @@ function getTripPos(tripData, prevNext) {
         }
         // New method: Try to use intermediate coords
         coordsBetween = tripCoords.slice(Math.min(idxStart, idxEnd), Math.max(idxStart, idxEnd) + 1);
+        // Still at same stop (waiting time): return this stop's coords
+        if (idxStart == idxEnd) {
+            return [[prevLat, prevLon], [0, 0]];
+        }
         // Find the total length between the stops
         let lenBetweenStops = 0;
         for (let i = 1; i < coordsBetween.length; i++) {
@@ -139,19 +128,10 @@ function getTripPos(tripData, prevNext) {
     const lat = prevLat + ratio * (nextLat - prevLat);
     const lon = prevLon + ratio * (nextLon - prevLon);
 
-    console.log('using extreme fallback');
+    console.log('using extreme fallback for line', tripData.route_short_name, 'with coords', [lat, lon], "id", tripId, "pylines entry", tripCoords);
     return [[lat, lon], latLonDiff];
 }
 
-let basicData = null;
-
-async function getBusesFromApi() {
-    console.log("awaiting");
-    const response = await fetch(`${url}/get-basic-data`, { method: "POST" });
-    basicData = await response.json();
-    console.log("got it");
-    updateBuses(true);
-}
 
 function getDescrInOrder(description, lastStopName) {
     splitted = description.split("-");
@@ -246,13 +226,15 @@ setArrowDirection(exMarker, latLonDiff);
 getAllPolylines();
 getAllStops();
 
-getBusesFromApi();
+// basicData = await getBusesFromApi();
+// updateBuses(true);
 
 let sparseIntervalId = setInterval(async () => {
     try {
         getAllPolylines();
 
-        getBusesFromApi();
+        basicData = await getBusesFromApi();
+        updateBuses(true);
     } catch (error) {
         console.log("Clearing interval...");
         clearInterval(sparseIntervalId);
