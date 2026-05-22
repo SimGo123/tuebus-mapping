@@ -52,27 +52,35 @@ def _get_datetime_now() -> datetime:
     
     return datetime.now()
 
+_stop_times_today_cache: dict = {}
+
 def get_tue_stop_times_today() -> pd.DataFrame:
+    global _stop_times_today_cache
+
     dt_now = _get_datetime_now()
     hr_now = dt_now.hour
-    
+
     # Deal with night buses: Assumption is that they belong to the previous day until 4am
     if hr_now < NEXT_DAY_BORDER_HR:
         dt_now = dt_now - pd.Timedelta(days=1)
-    
+
     date_now = dt_now.strftime("%Y%m%d")
-    
-    routes = get_all_tue_routes()
-    routes_joined = "|".join(routes)
-    
+
+    if date_now in _stop_times_today_cache:
+        return _stop_times_today_cache[date_now]
+
+    tue_routes = get_all_tue_routes()
+    routes_joined = "|".join(tue_routes)
+
     active_services = gk.get_active_services(feed, date_now)
     active_joined = "|".join([f"-{acs}-" for acs in active_services])
 
     tue_stop_times = stop_times[stop_times["trip_id"].str.contains(routes_joined)]
     tue_stop_times = tue_stop_times[tue_stop_times["trip_id"].str.contains(active_joined)]
-    
+
     merged = tue_stop_times.merge(stops, on="stop_id")
-    
+
+    _stop_times_today_cache = {date_now: merged}
     return merged
 
 def filter_trips_now(df: pd.DataFrame) -> pd.DataFrame:
