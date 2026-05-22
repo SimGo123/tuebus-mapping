@@ -7,10 +7,6 @@ async function getAllPolylines() {
     } catch (e) {
         console.error('pylines resp', text);
     }
-
-    clearPolylines();
-    addPolylines();
-    getAllStops();
 }
 
 async function getAllStops() {

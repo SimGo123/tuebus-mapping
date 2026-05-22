@@ -27,37 +27,6 @@ function addMarker(coord, popupText = "") {
     return marker;
 }
 
-function createBusPopupDescr(tripData, prevNext) {
-    line = tripData.route_short_name;
-    long_name = tripData.route_long_name;
-    tripId = tripData.trip_id;
-    lastStopId = tripData.stop_id[tripData.stop_id.length - 1];
-    lastStopName = _getShortStopName(lastStopId);
-
-    descr = getDescrInOrder(long_name, lastStopName);
-    all_stop_names = tripData.stop_id.map(stopId => stopsDict[stopId] ? stopsDict[stopId].stop_name : "Unknown stop");
-    all_stop_names = all_stop_names.map(name => name.replace("Tübingen ", ""));
-    descr += "<br><br><div class='stop-list'>"
-    colStyles = [];
-    stopNamesPopup = [];
-    for (let i = 0; i < all_stop_names.length; i++) {
-        let colStyle = "";
-        if (i == prevNext[1]) {
-            colStyle = "color: red; font-weight: bold;";
-            colStyles.push(colStyle);
-        } else if (i < prevNext[1]) {
-            colStyle = "color: gray; display: none;";
-            colStyles.push(colStyle);
-        }
-        stopName = `<b>${i + 1}.</b> ${all_stop_names[i]}`;
-        stopNamesPopup.push(stopName);
-        descr += `<div class='stop-item' style='${colStyle}'><b>${i + 1}.</b> ${all_stop_names[i]}</div>`;
-    }
-    descr += "</div></div>";
-    popup = `<h3>${line}: <span id="last-stop-name">${lastStopName}</span></h3>${descr}`;
-    return [line, popup, colStyles, stopNamesPopup, lastStopName];
-}
-
 function syncBusMarkers(updates, sparseUd) {
     const nextKeys = new Set(Object.keys(updates));
 
@@ -79,7 +48,8 @@ function syncBusMarkers(updates, sparseUd) {
                     el.innerHTML = stopNamesPopup[i];
                 });
             }
-            // Draw triangle indicating direction on the bus marker
+
+            net_pylines[key]["closestPoint"] = data.closestPoint;
         } else {
             // create new marker
             busMarkers[key] = getBusMarker(data.coord, popupText = popup, label = line, trip = key, stopIds = data.stopIds);
@@ -94,6 +64,9 @@ function syncBusMarkers(updates, sparseUd) {
             delete busMarkers[key];
         }
     }
+    
+    clearPolylines();
+    addPolylines();
 }
 
 function getBusMarker(coord, popupText = "", label = "", trip = null, stopIds = null) {
@@ -141,16 +114,7 @@ function getBusMarker(coord, popupText = "", label = "", trip = null, stopIds = 
         addStopMarkers();
     });
 
-    // Unhighlight line on popup close
-    // marker.on("popupclose", function () {
-    //     highlightedLine = null;
-    //     clearPolylines();
-    //     addPolylines();
-
-    //     clearStopMarkers();
-    //     stopIdsToHighlight = null;
-    //     addStopMarkers();
-    // });
+    // marker.on("popupclose", function () { });
 
     return marker;
 }
@@ -216,7 +180,22 @@ function addPolylines() {
         _addPolyline(line, { "color": "gray" });
     });
     if (highlightedLine && net_pylines[highlightedLine]) {
-        _addPolyline(net_pylines[highlightedLine], { "color": "red" });
+        if (!net_pylines[highlightedLine]["closestPoint"]) {
+            console.log('c1');
+            _addPolyline(net_pylines[highlightedLine], { "color": "red" });
+        } else {            const coords = net_pylines[highlightedLine];
+            const closestPoint = net_pylines[highlightedLine]["closestPoint"];
+            const idx = coords.findIndex(c => c[0] === closestPoint[0] && c[1] === closestPoint[1]);
+            if (idx !== -1) {
+                const before = coords.slice(0, idx + 1);
+                const after = coords.slice(idx);
+                _addPolyline(before, { "color": "pink" });
+                _addPolyline(after, { "color": "red" });
+            } else {
+                console.log('c2');
+                _addPolyline(coords, { "color": "red" });
+            }
+        }
     }
 }
 
@@ -257,7 +236,7 @@ function addStopMarkers() {
     addLater.forEach(data => _addStopMarker(data.coord, data.popup, color = "red", fillColor = "orange"));
 }
 
-// 5. Optional: clear helpers
+// clear helpers
 function clearStopMarkers() {
     stopMarkers.forEach(m => map.removeLayer(m));
     stopMarkers.length = 0;

@@ -73,9 +73,18 @@ function getPosWIntermediatePoints(coordsBetween, ratio) {
             const lon = lon1 + segmentRatio * (lon2 - lon1);
             const latLonDiff = [lat2 - lat1, lon2 - lon1];
             // console.log('Using new method');
-            return [[lat, lon], latLonDiff];
+            const closestPoint = segmentRatio < 0.5 ? [lat1, lon1] : [lat2, lon2];
+            return new TripPosData(_busPos=[lat, lon], _latLonDiff=latLonDiff, _closestPoint=closestPoint);
         }
         len_so_far += segmentLen;
+    }
+}
+
+class TripPosData {
+    constructor(_busPos, _latLonDiff, _closestPoint) {
+        this.busPos = _busPos;
+        this.latLonDiff = _latLonDiff;
+        this.closestPoint = _closestPoint;
     }
 }
 
@@ -85,7 +94,8 @@ function getTripPos(tripData, prevNext) {
     const lons = tripData.stop_lon;
     if (prevNext == -1) {
         console.log('after last stop', tripData);
-        return [[lats[lats.length - 1], lons[lons.length - 1]], [0, 0]];
+        const lastStop = [lats[lats.length - 1], lons[lons.length - 1]];
+        return new TripPosData(_busPos=lastStop, _latLonDiff=[0, 0], _closestPoint=lastStop);
     }
     const [prevStop, nextStop] = prevNext;
     const prevDept = timeToSeconds(tripData.departure_time[prevStop]);
@@ -112,13 +122,14 @@ function getTripPos(tripData, prevNext) {
             const lon = prevLon + ratio * (nextLon - prevLon);
 
             // console.log('using fallback');
-            return [[lat, lon], latLonDiff];
+            closestPoint = ratio < 0.5 ? [prevLat, prevLon] : [nextLat, nextLon];
+            return new TripPosData(_busPos=[lat, lon], _latLonDiff=latLonDiff, _closestPoint=closestPoint);
         }
         // New method: Try to use intermediate coords
         coordsBetween = tripCoords.slice(Math.min(idxStart, idxEnd), Math.max(idxStart, idxEnd) + 1);
         // Still at same stop (waiting time): return this stop's coords
         if (idxStart == idxEnd) {
-            return [[prevLat, prevLon], [0, 0]];
+            return new TripPosData(_busPos=[prevLat, prevLon], _latLonDiff=[0, 0], _closestPoint=[prevLat, prevLon]);
         }
 
         return getPosWIntermediatePoints(coordsBetween, ratio);
