@@ -5,8 +5,7 @@ async function getAllPolylines() {
     try {
         net_pylines = JSON.parse(text);
     } catch (e) {
-        console.error('Error parsing pylines response:', e);
-        console.log('pylines resp', text);
+        console.error('pylines resp', text);
     }
 
     clearPolylines();
@@ -20,8 +19,7 @@ async function getAllStops() {
     try {
         stopsDict = JSON.parse(text);
     } catch (e) {
-        console.error('Error parsing stops response:', e);
-        console.log('stops resp', text);
+        console.error('stops resp', text);
     }
 
     clearStopMarkers();
@@ -36,8 +34,7 @@ async function getBusesFromApi() {
     try {
         basicData = JSON.parse(text);
     } catch (e) {
-        console.error('Error parsing bus response:', e);
-        console.log('bus resp', text);
+        console.error('basicData resp', text);
     }
     console.log("got it");
 }

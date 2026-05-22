@@ -27,11 +27,44 @@ function addMarker(coord, popupText = "") {
     return marker;
 }
 
+function createBusPopupDescr(tripData, prevNext) {
+    line = tripData.route_short_name;
+    long_name = tripData.route_long_name;
+    tripId = tripData.trip_id;
+    lastStopId = tripData.stop_id[tripData.stop_id.length - 1];
+    lastStopName = _getShortStopName(lastStopId);
+
+    descr = getDescrInOrder(long_name, lastStopName);
+    all_stop_names = tripData.stop_id.map(stopId => stopsDict[stopId] ? stopsDict[stopId].stop_name : "Unknown stop");
+    all_stop_names = all_stop_names.map(name => name.replace("Tübingen ", ""));
+    descr += "<br><br><div class='stop-list'>"
+    colStyles = [];
+    stopNamesPopup = [];
+    for (let i = 0; i < all_stop_names.length; i++) {
+        let colStyle = "";
+        if (i == prevNext[1]) {
+            colStyle = "color: red; font-weight: bold;";
+            colStyles.push(colStyle);
+        } else if (i < prevNext[1]) {
+            colStyle = "color: gray; display: none;";
+            colStyles.push(colStyle);
+        }
+        stopName = `<b>${i + 1}.</b> ${all_stop_names[i]}`;
+        stopNamesPopup.push(stopName);
+        descr += `<div class='stop-item' style='${colStyle}'><b>${i + 1}.</b> ${all_stop_names[i]}</div>`;
+    }
+    descr += "</div></div>";
+    popup = `<h3>${line}: <span id="last-stop-name">${lastStopName}</span></h3>${descr}`;
+    return [line, popup, colStyles, stopNamesPopup, lastStopName];
+}
+
 function syncBusMarkers(updates, sparseUd) {
     const nextKeys = new Set(Object.keys(updates));
 
     // 1. Update existing + add new
     for (const [key, data] of Object.entries(updates)) {
+        res = createBusPopupDescr(data.tripData, data.prevNext);
+        [line, popup, colStyles, stopNamesPopup, lastStopName] = res;
         if (busMarkers[key]) {
             // update existing marker position
             // console.log(`Updating bus ${key} position to ${data.coord}`);
@@ -40,14 +73,16 @@ function syncBusMarkers(updates, sparseUd) {
             // Update which station gets which color in the popup
             const popupEl = busMarkers[key].getPopup().getElement();
             if (popupEl) {
+                popupEl.querySelector("#last-stop-name").textContent = lastStopName;
                 popupEl.querySelectorAll('.stop-item').forEach((el, i) => {
-                    el.style = data.colStyles[i];
+                    el.style = colStyles[i];
+                    el.innerHTML = stopNamesPopup[i];
                 });
             }
             // Draw triangle indicating direction on the bus marker
         } else {
             // create new marker
-            busMarkers[key] = getBusMarker(data.coord, popupText = data.popup, label = data.label, trip = key, stopIds = data.stopIds);
+            busMarkers[key] = getBusMarker(data.coord, popupText = popup, label = line, trip = key, stopIds = data.stopIds);
         }
         setArrowDirection(busMarkers[key], data.latLonDiff);
     }
