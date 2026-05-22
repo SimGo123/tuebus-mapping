@@ -17,6 +17,15 @@ app = Flask(
 
 CORS(app)
 
+@app.errorhandler(Exception)
+def handle_exception(e):
+    return (
+        f"<h1>Flask Error: {type(e).__name__}</h1>"
+        f"<pre>{traceback.format_exc()}</pre>",
+        500,
+        {"Content-Type": "text/html"},
+    )
+
 @app.route("/")
 def home():
     with open(join(BASE_DIR, "../frontend/index.html"), "r") as f:
@@ -86,4 +95,4 @@ def get_basic_data():
     return jsonify(agg_lines_dict)
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5001)
+    app.run(debug=True, use_reloader=False, host="0.0.0.0", port=5003)
