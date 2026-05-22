@@ -118,7 +118,7 @@ try:
         try:
             proxy()
             break
-        except (FileNotFoundError, ConnectionRefusedError, ConnectionResetError):
+        except (FileNotFoundError, ConnectionRefusedError, ConnectionResetError, http.client.RemoteDisconnected):
             if attempt == 0:
                 continue  # gunicorn died mid-request, restart and retry
             raise
