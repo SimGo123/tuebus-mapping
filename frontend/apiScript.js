@@ -40,5 +40,4 @@ async function getBusesFromApi() {
         console.log('bus resp', text);
     }
     console.log("got it");
-    return basicData;
 }
