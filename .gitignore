@@ -16,3 +16,6 @@ cache/
 ftp_upload.py
 *_bcu\.*
 *test*
+backend/street-routes/*bcu*
+
+.VSCodeCounter/
